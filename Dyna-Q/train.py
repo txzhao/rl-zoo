@@ -1,27 +1,23 @@
+import os, sys
+dir = os.path.dirname(__file__)
+pathname = os.path.join(dir, '../')
+sys.path.append(os.path.realpath(pathname))
+
 import time
-import torch
-import torch.nn as nn
-import torch.nn.init as weight_init
-from torch.autograd import Variable
-import torch.nn.functional as F
 import numpy as np
 from matplotlib import pyplot as plt
 import gym
 from dyna_q import DynaQ
 import utils
 
+
 # Hyper Parameters
-Pretrain_steps = 200
-GAN_pretrain_steps = 600
-Epochs = 320
 MaxEpisodes = 300
-GANSampleSzie = 30000
 num_of_runs = 5
-print_per_epoch = 5
 winWidth = 100
 K = 5
 
-env_id = 'MountainCar-v0'
+env_id = 'CartPole-v0'
 env = gym.make(env_id)
 N_ACTIONS = env.action_space.n
 N_STATES = env.observation_space.shape[0]
@@ -30,8 +26,11 @@ ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_sp
 
 if __name__ == '__main__':
 	aver_rwd_dyna = np.array((MaxEpisodes, ))
+
 	for exp in range(num_of_runs):
-		rwd_dyna = []
+		print('\nExperiment NO.' + str(exp+1))
+
+		# agent spec
 		config = {
 			'n_actions': N_ACTIONS,
 			'n_states': N_STATES,
@@ -45,15 +44,14 @@ if __name__ == '__main__':
 			'decay_eps': 0.99,
 			'discount': 0.99,
 			'target_update_freq': 500,
-			'memory_capacity': 20000,
-			'first_update': 1000
+			'memory_capacity': 10000,
+			'first_update': 200
 		}
 		dyna_q_agent = DynaQ(config)
 
 		EPSILON = config['init_epsilon']
-		delta_eps = (config['init_epsilon'] - config['min_epsilon'])/float(config['decay_steps'])
+		rwd_dyna = []
 
-		print('\nDyna-Q agent...')
 		for i_episode in range(MaxEpisodes):
 			s = env.reset()
 			ep_r = 0
@@ -61,10 +59,8 @@ if __name__ == '__main__':
 			while True:
 				# decay exploration
 				EPSILON = utils.epsilon_decay_exp(eps=EPSILON, min_eps=config['min_epsilon'], decay=config['decay_eps'])
-				# EPSILON = utils.epsilon_linear_anneal(
-				# 	eps=EPSILON, ini_eps=config['init_epsilon'], min_eps=config['min_epsilon'], timesteps=config['decay_steps'])
 
-				#env.render()
+				# env.render()
 				a = dyna_q_agent.choose_action(s, EPSILON)
 
 				# take action
@@ -74,12 +70,16 @@ if __name__ == '__main__':
 				# modify the reward
 				r = utils.modify_rwd(env_id, s_)
 
+				# store current transition
 				dyna_q_agent.store_transition(s, a, r, s_, done)
 				timestep += 1
+
+				# start update policy and env model when memory has enough exps
 				if dyna_q_agent.memory_counter > config['first_update']:
 					dyna_q_agent.learn()
 					dyna_q_agent.update_env_model()
 
+				# planning through generated exps
 				for _ in range(K):
 					dyna_q_agent.simulate_learn()
 
@@ -89,13 +89,18 @@ if __name__ == '__main__':
 					break
 				s = s_
 
+		del dyna_q_agent
+
+		# incrementally calculate mean and variance
 		rwd_dyna = utils.moving_avg(rwd_dyna, winWidth)
 		tmp_rwd = np.array(rwd_dyna)
+		pre_rwd = aver_rwd_dyna
 		aver_rwd_dyna = aver_rwd_dyna + (tmp_rwd - aver_rwd_dyna)/float(exp+1)
 		if exp == 0:
 			var_rwd_dyna = np.zeros(aver_rwd_dyna.shape)
 		else:
-			var_rwd_dyna = float(exp-1)/float(exp)*var_rwd_dyna + np.square(tmp_rwd - aver_rwd_dyna)/float(exp+1)
+			var_rwd_dyna = var_rwd_dyna + np.multiply((tmp_rwd - pre_rwd), (tmp_rwd - aver_rwd_dyna))/float(exp+1)
+			var_rwd_dyna = var_rwd_dyna/float(exp+1)
 
 	env.close()
 
@@ -108,6 +113,6 @@ if __name__ == '__main__':
 	ax.set_ylabel('Average Rewards')
 	ax.legend(loc='upper left')
 	ax.grid()
-	fig.savefig('./Figure/result_{}.png'.format(int(time.time())))
+	fig.savefig('../Figures/dyna_q_{}.png'.format(int(time.time())))
 	plt.close(fig)
 

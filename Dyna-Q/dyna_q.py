@@ -7,9 +7,9 @@ from copy import deepcopy
 import utils
 
 
-class Net(nn.Module):
+class Q_Net(nn.Module):
 	def __init__(self, N_STATES, N_ACTIONS, H1Size, H2Size):
-		super(Net, self).__init__()
+		super(Q_Net, self).__init__()
 		# build network layers
 		self.fc1 = nn.Linear(N_STATES, H1Size)
 		self.fc2 = nn.Linear(H1Size, H2Size)
@@ -65,12 +65,12 @@ class DynaQ(object):
 		self.Q_H2Size = 32
 		self.env_H1Size = 64
 		self.env_H2Size = 32
-		self.eval_net = Net(self.n_states, self.n_actions, self.Q_H1Size, self.Q_H2Size)
+		self.eval_net = Q_Net(self.n_states, self.n_actions, self.Q_H1Size, self.Q_H2Size)
 		self.target_net = deepcopy(self.eval_net)
 		self.env_model = EnvModel(self.n_states, 1, self.env_H1Size, self.env_H2Size)
-		self.learn_step_counter = 0                                     # for target updating
-		self.memory_counter = 0                                         # for storing memory
-		self.memory = np.zeros((self.config['memory_capacity'], self.n_states * 2 + 3))     # initialize memory
+		self.learn_step_counter = 0                                     							# for target updating
+		self.memory_counter = 0                                         							# for storing memory
+		self.memory = np.zeros((self.config['memory_capacity'], self.n_states * 2 + 3))     		# initialize memory
 		self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.config['learning_rate'])
 		self.env_opt = torch.optim.Adam(self.env_model.parameters(), lr=0.01)
 		self.loss_func = nn.MSELoss()
@@ -82,7 +82,7 @@ class DynaQ(object):
 		if np.random.uniform() > EPSILON:   # greedy
 			actions_value = self.eval_net.forward(x)
 			action = torch.max(actions_value, 1)[1].data.numpy()
-			action = action[0][0] if self.env_a_shape == 0 else action.reshape(self.env_a_shape)  # return the argmax index
+			action = action[0][0] if self.env_a_shape == 0 else action.reshape(self.env_a_shape)  	# return the argmax index
 		else:   # random
 			action = np.random.randint(0, self.n_actions)
 			action = action if self.env_a_shape == 0 else action.reshape(self.env_a_shape)
@@ -162,7 +162,7 @@ class DynaQ(object):
 		# sample batch transitions
 		sample_index = np.random.choice(min(self.config['memory_capacity'], self.memory_counter), self.config['batch_size'])
 		b_memory = self.memory[sample_index, :]
-		# b_s = b_memory[:, :self.n_states]
+		b_s = b_memory[:, :self.n_states]
 
 		# # cartpole random generated data
 		# b_s_s = np.random.uniform(low=-2.4, high=2.4, size=(self.config['batch_size'], 1))
@@ -172,9 +172,9 @@ class DynaQ(object):
 		# b_s = np.hstack((b_s_s, b_s_v, b_s_theta, b_s_w))
 
 		# mountaincar random generated data
-		b_s_s = np.random.uniform(low=-1.2, high=0.6, size=(self.config['batch_size'], 1))
-		b_s_v = np.random.uniform(low=-0.07, high=0.07, size=(self.config['batch_size'], 1))
-		b_s = np.hstack((b_s_s, b_s_v))
+		# b_s_s = np.random.uniform(low=-1.2, high=0.6, size=(self.config['batch_size'], 1))
+		# b_s_v = np.random.uniform(low=-0.07, high=0.07, size=(self.config['batch_size'], 1))
+		# b_s = np.hstack((b_s_s, b_s_v))
 
 		b_a = np.random.randint(self.n_actions, size=b_s.shape[0])
 		b_a = np.reshape(b_a, (b_a.shape[0], 1))
