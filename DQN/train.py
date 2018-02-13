@@ -43,7 +43,8 @@ if __name__ == '__main__':
 			'decay_eps': 0.99,
 			'discount': 0.99,
 			'target_update_freq': 500,
-			'memory_capacity': 50000,
+			'memory_capacity': 32768,
+			'prioritized': True,
 			'first_update': 1000
 		}
 		dqn_agent = DQN(config)
@@ -78,7 +79,7 @@ if __name__ == '__main__':
 					dqn_agent.learn()
 
 				if done:
-					print('Pretrain - EXP ', exp+1, '| Ep: ', i_episode + 1, '| timestep: ', timestep, '| Ep_r: ', ep_r)
+					print('EXP ', exp+1, '| Ep: ', i_episode + 1, '| timestep: ', timestep, '| Ep_r: ', ep_r)
 					rwd_dqn.append(ep_r)
 					break
 				s = s_
@@ -108,8 +109,14 @@ if __name__ == '__main__':
 	ax.legend(loc='upper left')
 	ax.grid()
 	if config['double_q_model']:
-		fig.savefig('../Figures/ddqn_{}.png'.format(int(time.time())))
+		if config['prioritized']:
+			fig.savefig('../Figures/ddqn_per_{}.png'.format(int(time.time())))
+		else:
+			fig.savefig('../Figures/ddqn_{}.png'.format(int(time.time())))
 	else:
-		fig.savefig('../Figures/dqn_{}.png'.format(int(time.time())))
+		if config['prioritized']:
+			fig.savefig('../Figures/dqn_per_{}.png'.format(int(time.time())))
+		else:
+			fig.savefig('../Figures/dqn_{}.png'.format(int(time.time())))
 	plt.close(fig)
 
