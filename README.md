@@ -6,6 +6,7 @@ PyTorch implementations of various reinforcement learning algorithms.
 
 - [Deep Q-Learning (DQN)](https://github.com/txzhao/rl-zoo/tree/master/DQN)
 - [Double Deep Q-Learning (DDQN)](https://github.com/txzhao/rl-zoo/tree/master/DQN)
+- [Prioritized Experience Replay](https://github.com/txzhao/rl-zoo/tree/master/DQN)
 - [Dyna-Q](https://github.com/txzhao/rl-zoo/tree/master/Dyna-Q)
 
 #### Dependencies

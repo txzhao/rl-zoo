@@ -82,7 +82,7 @@ class DynaQ(object):
 		if np.random.uniform() > EPSILON:   # greedy
 			actions_value = self.eval_net.forward(x)
 			action = torch.max(actions_value, 1)[1].data.numpy()
-			action = action[0][0] if self.env_a_shape == 0 else action.reshape(self.env_a_shape)  	# return the argmax index
+			action = action[0] if self.env_a_shape == 0 else action.reshape(self.env_a_shape)  	# return the argmax index
 		else:   # random
 			action = np.random.randint(0, self.n_actions)
 			action = action if self.env_a_shape == 0 else action.reshape(self.env_a_shape)
@@ -106,12 +106,27 @@ class DynaQ(object):
 		b_memory = self.memory[sample_index, :]
 
 		b_in = Variable(torch.FloatTensor(np.hstack((b_memory[:, :self.n_states], b_memory[:, self.n_states:self.n_states+1]))))
-		b_y = Variable(torch.FloatTensor(np.hstack((b_memory[:, -self.n_states:], b_memory[:, self.n_states+1:self.n_states+2], b_memory[:, self.n_states+2:self.n_states+3]))))
+		# b_y = Variable(torch.FloatTensor(np.hstack((b_memory[:, -self.n_states:], b_memory[:, self.n_states+1:self.n_states+2], b_memory[:, self.n_states+2:self.n_states+3]))))
+		b_y_s = Variable(torch.FloatTensor(b_memory[:, -self.n_states:]))
+		b_y_r = Variable(torch.FloatTensor(b_memory[:, self.n_states+1:self.n_states+2]))
+		b_y_d = Variable(torch.FloatTensor(b_memory[:, self.n_states+2:self.n_states+3]))
 
-		b_out = self.env_model(b_in)
-		loss = self.loss_func(torch.cat(b_out, 1), b_y)
+		b_s_, b_r, b_d = self.env_model(b_in)
+		# loss = self.loss_func(torch.cat(b_out, 1), b_y)
+		loss_s = self.loss_func(b_s_, b_y_s)
+		loss_r = self.loss_func(b_r, b_y_r)
+		loss_d = self.loss_func(b_d, b_y_d)
+
 		self.env_opt.zero_grad()
-		loss.backward()
+		loss_s.backward(retain_graph=True)
+		self.env_opt.step()
+
+		self.env_opt.zero_grad()
+		loss_r.backward(retain_graph=True)
+		self.env_opt.step()
+
+		self.env_opt.zero_grad()
+		loss_d.backward()
 		self.env_opt.step()
 
 	def learn(self):
