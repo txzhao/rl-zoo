@@ -48,7 +48,7 @@ if __name__ == '__main__':
 			'discount': 0.99,
 			'target_update_freq': 500,
 			'memory_capacity': 10000,
-			'first_update': 200
+			'first_update': 1000
 		}
 		dyna_q_agent = DynaQ(config)
 
@@ -77,9 +77,12 @@ if __name__ == '__main__':
 				dyna_q_agent.store_transition(s, a, r, s_, done)
 				timestep += 1
 
-				# start update policy and env model when memory has enough exps
+				# start update policy when memory has enough exps
 				if dyna_q_agent.memory_counter > config['first_update']:
 					dyna_q_agent.learn()
+
+				# start update env model when memory has enough exps
+				if dyna_q_agent.memory_counter > config['batch_size']:
 					dyna_q_agent.update_env_model()
 
 				# planning through generated exps

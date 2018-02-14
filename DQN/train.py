@@ -13,8 +13,8 @@ import utils
 
 
 # Hyper Parameters
-MaxEpisodes = 400
-num_of_runs = 3
+MaxEpisodes = 300
+num_of_runs = 5
 winWidth = 100
 writeCSV = True
 savePlot = True
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 			'discount': 0.99,
 			'target_update_freq': 500,
 			'memory_capacity': 32768,
-			'prioritized': True,
+			'prioritized': False,
 			'first_update': 1000
 		}
 		dqn_agent = DQN(config)
@@ -82,7 +82,9 @@ if __name__ == '__main__':
 					dqn_agent.learn()
 
 				if done:
-					print('EXP ', exp+1, '| Ep: ', i_episode + 1, '| timestep: ', timestep, '| Ep_r: ', ep_r)
+					prefix = 'DDQN' if config['double_q_model'] else 'DQN'
+					if config['prioritized']: prefix += '-PER'
+					print(prefix + ' - EXP ', exp+1, '| Ep: ', i_episode + 1, '| timestep: ', timestep, '| Ep_r: ', ep_r)
 					rwd_dqn.append(ep_r)
 					break
 				s = s_
@@ -104,7 +106,7 @@ if __name__ == '__main__':
 
 	# save data to csv
 	if writeCSV:
-		data = {'episodes': range(MaxEpisodes), 'rewards': list(aver_rwd_dyna), 'variances': list(np.sqrt(var_rwd_dyna))}
+		data = {'episodes': range(MaxEpisodes), 'rewards': list(aver_rwd_dqn), 'variances': list(np.sqrt(var_rwd))}
 		df = pd.DataFrame(data=dict([(key, pd.Series(value)) for key, value in data.items()]),
 			index=range(0, MaxEpisodes),
 			columns=['episodes', 'rewards', 'variances'])
