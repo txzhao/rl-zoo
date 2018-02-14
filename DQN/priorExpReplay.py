@@ -1,6 +1,3 @@
-# code is borrowed from 
-# https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py
-
 import numpy as np
 
 class SumTree(object):
@@ -23,7 +20,6 @@ class SumTree(object):
 	def add(self, p, data):
 		tree_idx = self.data_pointer + self.capacity - 1
 		self.data[self.data_pointer] = data  # update data_frame
-		# print('tree_idx', tree_idx)
 		self.update(tree_idx, p)  # update tree_frame
 
 		self.data_pointer += 1
@@ -36,7 +32,6 @@ class SumTree(object):
 		# then propagate the change through tree
 		while tree_idx != 0:    # this method is faster than the recursive loop in the reference code
 			tree_idx = (tree_idx - 1) // 2
-			# print('tree_idx', tree_idx)
 			self.tree[tree_idx] += change
 
 	def get_leaf(self, v, counter):
@@ -59,11 +54,9 @@ class SumTree(object):
 				leaf_idx = parent_idx
 				break
 			else:       # downward search, always search for a higher priority node
-				# print('idx:',v,'tree_left:',self.tree[cl_idx],'tree_right:',self.tree[cr_idx])
 				if v <= self.tree[cl_idx] or self.tree[cr_idx] == 0.0:
 					parent_idx = cl_idx
 				else:
-					# print('go to right')
 					v -= self.tree[cl_idx]
 					parent_idx = cr_idx
 
@@ -107,9 +100,7 @@ class PriorExpReplay(object):  # stored as ( s, a, r, s_ ) in SumTree
 		for i in range(n):
 			a, b = pri_seg * i, pri_seg * (i + 1)
 			v = np.random.uniform(a, b)
-			# print('v:', v, 'a:', a, 'b:', b, 'total:',self.tree.total_p)
 			idx, p, data = self.tree.get_leaf(v, counter)
-			# print('counter:',counter,'idx:', idx, 'p:', p)
 			prob = p / self.tree.total_p
 			ISWeights[i, 0] = np.power(prob/min_prob, -self.beta)
 			b_idx[i], b_memory[i, :] = idx, data
