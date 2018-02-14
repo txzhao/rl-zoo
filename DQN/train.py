@@ -5,6 +5,7 @@ sys.path.append(os.path.realpath(pathname))
 
 import time
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 import gym
 from dqn import DQN
@@ -15,6 +16,8 @@ import utils
 MaxEpisodes = 400
 num_of_runs = 3
 winWidth = 100
+writeCSV = True
+savePlot = True
 
 env_id = 'CartPole-v0'
 env = gym.make(env_id)
@@ -99,6 +102,23 @@ if __name__ == '__main__':
 
 	env.close()
 
+	# save data to csv
+	if writeCSV:
+		data = {'episodes': range(MaxEpisodes), 'rewards': list(aver_rwd_dyna), 'variances': list(np.sqrt(var_rwd_dyna))}
+		df = pd.DataFrame(data=dict([(key, pd.Series(value)) for key, value in data.items()]),
+			index=range(0, MaxEpisodes),
+			columns=['episodes', 'rewards', 'variances'])
+		if config['double_q_model']:
+			if config['prioritized']:
+				df.to_csv('../results/logs/ddqn_per_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
+			else:
+				df.to_csv('../results/logs/ddqn_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
+		else:
+			if config['prioritized']:
+				df.to_csv('../results/logs/dqn_per_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
+			else:
+				df.to_csv('../results/logs/dqn_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
+
 	# Save reward plot
 	fig, ax = plt.subplots(nrows=1, ncols=1)
 	ax.plot(range(MaxEpisodes), list(aver_rwd_dqn), 'k', label='no pre-training')
@@ -110,13 +130,13 @@ if __name__ == '__main__':
 	ax.grid()
 	if config['double_q_model']:
 		if config['prioritized']:
-			fig.savefig('../Figures/ddqn_per_{}.png'.format(int(time.time())))
+			fig.savefig('../results/figures/ddqn_per_{}.png'.format(int(time.time())))
 		else:
-			fig.savefig('../Figures/ddqn_{}.png'.format(int(time.time())))
+			fig.savefig('../results/figures/ddqn_{}.png'.format(int(time.time())))
 	else:
 		if config['prioritized']:
-			fig.savefig('../Figures/dqn_per_{}.png'.format(int(time.time())))
+			fig.savefig('../results/figures/dqn_per_{}.png'.format(int(time.time())))
 		else:
-			fig.savefig('../Figures/dqn_{}.png'.format(int(time.time())))
+			fig.savefig('../results/figures/dqn_{}.png'.format(int(time.time())))
 	plt.close(fig)
 

@@ -5,6 +5,7 @@ sys.path.append(os.path.realpath(pathname))
 
 import time
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 import gym
 from dyna_q import DynaQ
@@ -15,7 +16,9 @@ import utils
 MaxEpisodes = 300
 num_of_runs = 5
 winWidth = 100
-K = 5
+K = 2
+writeCSV = True
+savePlot = True
 
 env_id = 'CartPole-v0'
 env = gym.make(env_id)
@@ -39,7 +42,7 @@ if __name__ == '__main__':
 			'batch_size': 128,
 			'learning_rate': 5e-3,
 			'init_epsilon': 0.8,
-			'min_epsilon': 1e-4,
+			'min_epsilon': 0.01,
 			'decay_steps': 10000,
 			'decay_eps': 0.99,
 			'discount': 0.99,
@@ -104,15 +107,24 @@ if __name__ == '__main__':
 
 	env.close()
 
+	# save data to csv
+	if writeCSV:
+		data = {'episodes': range(MaxEpisodes), 'rewards': list(aver_rwd_dyna), 'variances': list(np.sqrt(var_rwd_dyna))}
+		df = pd.DataFrame(data=dict([(key, pd.Series(value)) for key, value in data.items()]),
+			index=range(0, MaxEpisodes),
+			columns=['episodes', 'rewards', 'variances'])
+		df.to_csv('../results/logs/dyna_q_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
+
 	# Save reward plot
-	fig, ax = plt.subplots(nrows=1, ncols=1)
-	ax.plot(range(MaxEpisodes), list(aver_rwd_dyna), 'k', label='Dyna-Q')
-	ax.fill_between(range(MaxEpisodes), aver_rwd_dyna + np.sqrt(var_rwd_dyna), aver_rwd_dyna - np.sqrt(var_rwd_dyna), facecolor='black', alpha=0.2)
-	ax.set_title('Number of Run: ' + str(num_of_runs))
-	ax.set_xlabel('Episodes')
-	ax.set_ylabel('Average Rewards')
-	ax.legend(loc='upper left')
-	ax.grid()
-	fig.savefig('../Figures/dyna_q_{}.png'.format(int(time.time())))
-	plt.close(fig)
+	if savePlot:
+		fig, ax = plt.subplots(nrows=1, ncols=1)
+		ax.plot(range(MaxEpisodes), list(aver_rwd_dyna), 'k', label='Dyna-Q')
+		ax.fill_between(range(MaxEpisodes), aver_rwd_dyna + np.sqrt(var_rwd_dyna), aver_rwd_dyna - np.sqrt(var_rwd_dyna), facecolor='black', alpha=0.2)
+		ax.set_title('Number of Run: ' + str(num_of_runs))
+		ax.set_xlabel('Episodes')
+		ax.set_ylabel('Average Rewards')
+		ax.legend(loc='upper left')
+		ax.grid()
+		fig.savefig('../results/figures/dyna_q_{}.png'.format(int(time.time())))
+		plt.close(fig)
 
