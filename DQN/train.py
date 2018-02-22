@@ -6,6 +6,7 @@ sys.path.append(os.path.realpath(pathname))
 import time
 import numpy as np
 import pandas as pd
+import json
 from matplotlib import pyplot as plt
 import gym
 from dqn import DQN
@@ -20,10 +21,12 @@ writeCSV = True
 savePlot = True
 
 env_id = 'CartPole-v0'
+config_file = 'ddqn_cartpole.json'
 env = gym.make(env_id)
 N_ACTIONS = env.action_space.n
 N_STATES = env.observation_space.shape[0]
 ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape     # to confirm the shape
+env_config = {'n_actions': N_ACTIONS, 'n_states': N_STATES, 'env_a_shape': ENV_A_SHAPE}
 
 
 if __name__ == '__main__':
@@ -33,26 +36,12 @@ if __name__ == '__main__':
 		print('\nExperiment NO.' + str(exp+1))
 
 		# agent spec
-		config = {
-			'n_actions': N_ACTIONS,
-			'n_states': N_STATES,
-			'env_a_shape': ENV_A_SHAPE,
-			'double_q_model': True,
-			'batch_size': 128,
-			'learning_rate': 5e-3,
-			'init_epsilon': 0.8,
-			'min_epsilon': 0.01,
-			'decay_steps': 10000,
-			'decay_eps': 0.99,
-			'discount': 0.99,
-			'target_update_freq': 500,
-			'memory_capacity': 32768,
-			'prioritized': False,
-			'first_update': 1000
-		}
+		config = json.load(open('./configs/' + config_file))
+		config.update(env_config)
 		dqn_agent = DQN(config)
 
-		EPSILON = config['init_epsilon']
+		EPSILON = config['exploration']['init_epsilon']
+		total_steps = 0
 		rwd_dqn = []
 
 		for i_episode in range(MaxEpisodes):
@@ -60,8 +49,14 @@ if __name__ == '__main__':
 			ep_r = 0
 			timestep = 0
 			while True:
+				total_steps += 1
+
 				# decay exploration
-				EPSILON = utils.epsilon_decay_exp(eps=EPSILON, min_eps=config['min_epsilon'], decay=config['decay_eps'])
+				EPSILON = utils.epsilon_decay(
+					eps=EPSILON, 
+					step=total_steps, 
+					config=config['exploration']
+				)
 
 				# env.render()
 				a = dqn_agent.choose_action(s, EPSILON)
@@ -71,7 +66,8 @@ if __name__ == '__main__':
 				ep_r += r
 
 				# modify the reward
-				r = utils.modify_rwd(env_id, s_)
+				if config['modify_reward']:
+					r = utils.modify_rwd(env_id, s_)
 
 				# store current transition
 				dqn_agent.store_transition(s, a, r, s_, done)
@@ -83,7 +79,7 @@ if __name__ == '__main__':
 
 				if done:
 					prefix = 'DDQN' if config['double_q_model'] else 'DQN'
-					if config['prioritized']: prefix += '-PER'
+					if config['memory']['prioritized']: prefix += '-PER'
 					print(prefix + ' - EXP ', exp+1, '| Ep: ', i_episode + 1, '| timestep: ', timestep, '| Ep_r: ', ep_r)
 					rwd_dqn.append(ep_r)
 					break
@@ -111,12 +107,12 @@ if __name__ == '__main__':
 			index=range(0, MaxEpisodes),
 			columns=['episodes', 'rewards', 'variances'])
 		if config['double_q_model']:
-			if config['prioritized']:
+			if config['memory']['prioritized']:
 				df.to_csv('../results/logs/ddqn_per_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
 			else:
 				df.to_csv('../results/logs/ddqn_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
 		else:
-			if config['prioritized']:
+			if config['memory']['prioritized']:
 				df.to_csv('../results/logs/dqn_per_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
 			else:
 				df.to_csv('../results/logs/dqn_steps_{}_run_{}.csv'.format(MaxEpisodes, num_of_runs))
@@ -131,12 +127,12 @@ if __name__ == '__main__':
 	ax.legend(loc='upper left')
 	ax.grid()
 	if config['double_q_model']:
-		if config['prioritized']:
+		if config['memory']['prioritized']:
 			fig.savefig('../results/figures/ddqn_per_{}.png'.format(int(time.time())))
 		else:
 			fig.savefig('../results/figures/ddqn_{}.png'.format(int(time.time())))
 	else:
-		if config['prioritized']:
+		if config['memory']['prioritized']:
 			fig.savefig('../results/figures/dqn_per_{}.png'.format(int(time.time())))
 		else:
 			fig.savefig('../results/figures/dqn_{}.png'.format(int(time.time())))

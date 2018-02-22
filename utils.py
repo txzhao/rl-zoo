@@ -36,6 +36,30 @@ def moving_avg(pointList, winWidth):
 
 	return moving_aves
 
+def epsilon_decay(eps, step, config):
+	if config['type'] == 'exponential':
+		return epsilon_decay_exp(
+			eps=eps, 
+			min_eps=config['min_epsilon'], 
+			decay=config['decay_eps']
+		)
+
+	if config['type'] == 'expo_step':
+		return epsilon_decay_exp_step(
+			step=step, 
+			ini_eps=config['init_epsilon'], 
+			min_eps=config['min_epsilon'], 
+			lamda=0.001
+		)
+
+	if config['type'] == 'linear_anneal':
+		return epsilon_linear_anneal(
+			eps=eps, 
+			ini_eps=config['init_epsilon'], 
+			min_eps=config['min_epsilon'], 
+			timesteps=config['decay_steps']
+		)
+
 def epsilon_decay_exp(eps, min_eps, decay=0.99):
 	return max(eps*decay, min_eps)
 

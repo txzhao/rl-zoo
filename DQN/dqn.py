@@ -41,10 +41,10 @@ class DQN(object):
 		self.target_net = deepcopy(self.eval_net)
 		self.learn_step_counter = 0                                     # for target updating
 		self.memory_counter = 0                                         # for storing memory
-		if self.config['prioritized']:
-			self.memory = PriorExpReplay(self.config['memory_capacity'])
+		if self.config['memory']['prioritized']:
+			self.memory = PriorExpReplay(self.config['memory']['memory_capacity'])
 		else:
-			self.memory = np.zeros((self.config['memory_capacity'], self.n_states * 2 + 3))     # initialize memory
+			self.memory = np.zeros((self.config['memory']['memory_capacity'], self.n_states * 2 + 3))     # initialize memory
 		self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.config['learning_rate'])
 		self.mse_loss = nn.MSELoss()
 		self.mse_element_loss = nn.MSELoss(reduce=False)
@@ -71,23 +71,23 @@ class DQN(object):
 
 	def store_transition(self, s, a, r, s_, d):
 		transition = np.hstack((s, [a, r, d], s_))
-		if self.config['prioritized']:
+		if self.config['memory']['prioritized']:
 			self.memory.store(transition)
 		else:
 			# replace the old memory with new memory
-			index = self.memory_counter % self.config['memory_capacity']
+			index = self.memory_counter % self.config['memory']['memory_capacity']
 			self.memory[index, :] = transition
 		self.memory_counter += 1
 
 	def store_batch_transitions(self, experiences):
-		index = self.memory_counter % self.config['memory_capacity']
+		index = self.memory_counter % self.config['memory']['memory_capacity']
 		for exp in experiences:
 			self.memory[index, :] = exp
 			self.memory_counter += 1
 
 	def clear_memory(self):
 		self.memory_counter = 0
-		self.memory = np.zeros((self.config['memory_capacity'], self.n_states * 2 + 3))
+		self.memory = np.zeros((self.config['memory']['memory_capacity'], self.n_states * 2 + 3))
 
 	def get_TD_error(self, transition):
 		b_s = Variable(torch.FloatTensor(transition[:, :self.n_states]))
@@ -114,11 +114,11 @@ class DQN(object):
 		self.learn_step_counter += 1
 
 		# sample batch transitions
-		if self.config['prioritized']:
+		if self.config['memory']['prioritized']:
 			tree_idx, b_memory, ISWeights = self.memory.sample(self.config['batch_size'], self.memory_counter)
 			b_weights = Variable(torch.FloatTensor(ISWeights))
 		else:
-			sample_index = np.random.choice(min(self.config['memory_capacity'], self.memory_counter), self.config['batch_size'])
+			sample_index = np.random.choice(min(self.config['memory']['memory_capacity'], self.memory_counter), self.config['batch_size'])
 			b_memory = self.memory[sample_index, :]
 
 		b_s = Variable(torch.FloatTensor(b_memory[:, :self.n_states]))
@@ -143,7 +143,7 @@ class DQN(object):
 			q_next = self.target_net(b_s_).detach()     # detach from graph, don't backpropagate
 			q_target = b_r + self.config['discount'] * q_next.max(1)[0].view(self.config['batch_size'], 1) * b_d  # shape (batch, 1)
 
-		if self.config['prioritized']:
+		if self.config['memory']['prioritized']:
 			abs_errors = self.l1_loss(q_eval, q_target)
 			loss = (b_weights*self.mse_element_loss(q_eval, q_target)).mean()
 			self.memory.batch_update(tree_idx, abs_errors.data.numpy())

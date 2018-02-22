@@ -6,6 +6,7 @@ sys.path.append(os.path.realpath(pathname))
 import time
 import numpy as np
 import pandas as pd
+import json
 from matplotlib import pyplot as plt
 import gym
 from dyna_q import DynaQ
@@ -21,10 +22,12 @@ writeCSV = True
 savePlot = True
 
 env_id = 'CartPole-v0'
+config_file = 'dyna_cartpole.json'
 env = gym.make(env_id)
 N_ACTIONS = env.action_space.n
 N_STATES = env.observation_space.shape[0]
 ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape     # to confirm the shape
+env_config = {'n_actions': N_ACTIONS, 'n_states': N_STATES, 'env_a_shape': ENV_A_SHAPE}
 
 
 if __name__ == '__main__':
@@ -34,25 +37,12 @@ if __name__ == '__main__':
 		print('\nExperiment NO.' + str(exp+1))
 
 		# agent spec
-		config = {
-			'n_actions': N_ACTIONS,
-			'n_states': N_STATES,
-			'env_a_shape': ENV_A_SHAPE,
-			'double_q_model': True,
-			'batch_size': 128,
-			'learning_rate': 5e-3,
-			'init_epsilon': 0.8,
-			'min_epsilon': 0.01,
-			'decay_steps': 10000,
-			'decay_eps': 0.99,
-			'discount': 0.99,
-			'target_update_freq': 500,
-			'memory_capacity': 10000,
-			'first_update': 1000
-		}
+		config = json.load(open('./configs/' + config_file))
+		config.update(env_config)
 		dyna_q_agent = DynaQ(config)
 
-		EPSILON = config['init_epsilon']
+		EPSILON = config['exploration']['init_epsilon']
+		total_steps = 0
 		rwd_dyna = []
 
 		for i_episode in range(MaxEpisodes):
@@ -60,8 +50,14 @@ if __name__ == '__main__':
 			ep_r = 0
 			timestep = 0
 			while True:
+				total_steps += 1
+
 				# decay exploration
-				EPSILON = utils.epsilon_decay_exp(eps=EPSILON, min_eps=config['min_epsilon'], decay=config['decay_eps'])
+				EPSILON = utils.epsilon_decay(
+					eps=EPSILON, 
+					step=total_steps, 
+					config=config['exploration']
+				)
 
 				# env.render()
 				a = dyna_q_agent.choose_action(s, EPSILON)
@@ -71,7 +67,8 @@ if __name__ == '__main__':
 				ep_r += r
 
 				# modify the reward
-				r = utils.modify_rwd(env_id, s_)
+				if config['modify_reward']:
+					r = utils.modify_rwd(env_id, s_)
 
 				# store current transition
 				dyna_q_agent.store_transition(s, a, r, s_, done)

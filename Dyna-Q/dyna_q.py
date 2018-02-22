@@ -70,7 +70,7 @@ class DynaQ(object):
 		self.env_model = EnvModel(self.n_states, 1, self.env_H1Size, self.env_H2Size)
 		self.learn_step_counter = 0                                     							# for target updating
 		self.memory_counter = 0                                         							# for storing memory
-		self.memory = np.zeros((self.config['memory_capacity'], self.n_states * 2 + 3))     		# initialize memory
+		self.memory = np.zeros((self.config['memory']['memory_capacity'], self.n_states * 2 + 3))     		# initialize memory
 		self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.config['learning_rate'])
 		self.env_opt = torch.optim.Adam(self.env_model.parameters(), lr=0.01)
 		self.loss_func = nn.MSELoss()
@@ -91,18 +91,18 @@ class DynaQ(object):
 	def store_transition(self, s, a, r, s_, d):
 		transition = np.hstack((s, [a, r, d], s_))
 		# replace the old memory with new memory
-		index = self.memory_counter % self.config['memory_capacity']
+		index = self.memory_counter % self.config['memory']['memory_capacity']
 		self.memory[index, :] = transition
 		self.memory_counter += 1
 
 	def store_batch_transitions(self, experiences):
-		index = self.memory_counter % self.config['memory_capacity']
+		index = self.memory_counter % self.config['memory']['memory_capacity']
 		for exp in experiences:
 			self.memory[index, :] = exp
 			self.memory_counter += 1
 
 	def update_env_model(self):
-		sample_index = np.random.choice(min(self.config['memory_capacity'], self.memory_counter), self.config['batch_size'])
+		sample_index = np.random.choice(min(self.config['memory']['memory_capacity'], self.memory_counter), self.config['batch_size'])
 		b_memory = self.memory[sample_index, :]
 
 		b_in = Variable(torch.FloatTensor(np.hstack((b_memory[:, :self.n_states], b_memory[:, self.n_states:self.n_states+1]))))
@@ -136,7 +136,7 @@ class DynaQ(object):
 		self.learn_step_counter += 1
 
 		# sample batch transitions
-		sample_index = np.random.choice(min(self.config['memory_capacity'], self.memory_counter), self.config['batch_size'])
+		sample_index = np.random.choice(min(self.config['memory']['memory_capacity'], self.memory_counter), self.config['batch_size'])
 		b_memory = self.memory[sample_index, :]
 		b_s = Variable(torch.FloatTensor(b_memory[:, :self.n_states]))
 		b_a = Variable(torch.LongTensor(b_memory[:, self.n_states:self.n_states+1].astype(int)))
@@ -175,7 +175,7 @@ class DynaQ(object):
 		self.learn_step_counter += 1
 
 		# sample batch transitions
-		sample_index = np.random.choice(min(self.config['memory_capacity'], self.memory_counter), self.config['batch_size'])
+		sample_index = np.random.choice(min(self.config['memory']['memory_capacity'], self.memory_counter), self.config['batch_size'])
 		b_memory = self.memory[sample_index, :]
 		b_s = b_memory[:, :self.n_states]
 

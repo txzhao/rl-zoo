@@ -1,0 +1,20 @@
+{
+	"double_q_model": true,
+	"batch_size": 128,
+	"learning_rate": 5e-3,
+	"exploration": {
+		"type": "exponential",
+		"init_epsilon": 0.8,
+		"min_epsilon": 0.01,
+		"decay_steps": 10000,
+		"decay_eps": 0.99
+	},
+	"memory": {
+		"memory_capacity": 50000,
+		"prioritized": false
+	},
+	"discount": 0.99,
+	"target_update_freq": 500,
+	"first_update": 1000,
+	"modify_reward": true
+}
